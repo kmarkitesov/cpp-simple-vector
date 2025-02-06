@@ -1,8 +1,3 @@
-// вставьте сюда ваш код для класса ArrayPtr
-// внесиnте в него изменения, 
-// которые позволят реализовать move-семантику
-
-
 #pragma once
 
 #include <cassert>
@@ -41,8 +36,7 @@ public:
     ArrayPtr& operator=(ArrayPtr&& other) noexcept {
         if(this != &other){
             delete[] raw_ptr_;
-            raw_ptr_ = nullptr;
-            swap(other);
+            raw_ptr_ = std::exchange(other.raw_ptr_, nullptr);
         }
 
         return *this;

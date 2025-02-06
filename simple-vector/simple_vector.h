@@ -1,6 +1,3 @@
-// вставьте сюда ваш код для класса SimpleVector
-// внесите необходимые изменения для поддержки move-семантики
-
 #pragma once
 
 #include <algorithm>
@@ -31,7 +28,9 @@ public:
     SimpleVector() noexcept = default;
 
     // Создаёт вектор из size элементов, инициализированных значением по умолчанию
-    explicit SimpleVector(size_t size) : size_(size), capacity_(size), data_(size) {}
+    explicit SimpleVector(size_t size) : size_(size), capacity_(size), data_(size) {
+        std::fill(begin(), end(), Type{});
+    }
 
     // Создаёт вектор из size элементов, инициализированных значением value
     SimpleVector(size_t size, const Type& value) : size_(size), capacity_(size), data_(size) {
@@ -52,8 +51,12 @@ public:
 
     SimpleVector& operator=(const SimpleVector& other) {
         if (this != &other) {
-            SimpleVector temp(other);
-            swap(temp);
+            if (other.IsEmpty()) {
+                Clear(); 
+            } else {
+                SimpleVector temp(other);
+                swap(temp);
+            }
         }
         return *this;
     }
@@ -66,10 +69,8 @@ public:
     SimpleVector& operator=(SimpleVector&& other) noexcept {
         if (this != &other) {
             data_ = std::move(other.data_);
-            size_ = other.size_;
-            capacity_ = other.capacity_;
-            other.size_ = 0;
-            other.capacity_ = 0;
+            size_ = std::exchange(other.size_, 0);
+            capacity_ = std::exchange(other.capacity_, 0);
         }
 
         return *this;
@@ -105,19 +106,11 @@ public:
     Iterator Insert(ConstIterator pos, const Type& value) {
         size_t index = static_cast<size_t>(pos - cbegin());
         if (size_ == capacity_) {
-            size_t new_capacity = capacity_ == 0 ? 1 : capacity_ * 2;
-            ArrayPtr<Type> new_data(new_capacity);
-            std::copy(cbegin(), pos, new_data.Get());
-            new_data[index] = value;
-            std::copy(pos, cend(), new_data.Get() + index + 1);
-            data_.swap(new_data);
-            capacity_ = new_capacity;
-        }
-        else {
-            std::copy_backward(begin() + index, end(), end() + 1);
-            data_[index] = value;
+            Reserve(capacity_ == 0 ? 1 : capacity_ * 2);
         }
 
+        std::copy_backward(begin() + index, end(), end() + 1);
+        data_[index] = value;
         ++size_;
         return begin() + index;
     }
@@ -125,23 +118,10 @@ public:
     Iterator Insert(ConstIterator pos, Type&& value) {
         size_t index = static_cast<size_t>(pos - cbegin());
         if (size_ == capacity_) {
-            size_t new_capacity = capacity_ == 0 ? 1 : capacity_ * 2;
-            ArrayPtr<Type> new_data(new_capacity);
-            for (size_t i = 0; i < index; ++i) {
-                new_data[i] = std::move(data_[i]);
-            }
-            new_data[index] = std::move(value);
-            for (size_t i = index; i < size_; ++i) {
-                new_data[i + 1] = std::move(data_[i]);
-            }
-            data_.swap(new_data);
-            capacity_ = new_capacity;
+            Reserve(capacity_ == 0 ? 1 : capacity_ * 2);
         }
-        else {
-            std::move_backward(begin() + index, end(), end() + 1);
-            data_[index] = std::move(value);
-        }
-
+        std::move_backward(begin() + index, end(), end() + 1);
+        data_[index] = std::move(value);
         ++size_;
         return begin() + index;
     }
